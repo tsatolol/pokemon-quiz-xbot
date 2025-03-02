@@ -1,0 +1,7 @@
+boto3
+openai
+pandas
+pytest
+pytest-mock
+tabulate
+tweepy

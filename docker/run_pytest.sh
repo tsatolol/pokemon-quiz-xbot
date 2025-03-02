@@ -1,0 +1,1 @@
+docker exec dev_lambda_func_container pytest

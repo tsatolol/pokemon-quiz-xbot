@@ -1,0 +1,9 @@
+/.git/
+/.terraform/
+/.terraform.lock.hcl
+/terraform.tfstate
+/terraform.tfstate.backup
+/terraform.tfvars
+/docker/__pycache__/
+/docker/.pytest_cache/
+/docker/test_*
