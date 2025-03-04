@@ -105,13 +105,16 @@ system_prompt = """
 }}
 """
 
+
 def load_data():
     return pd.read_csv(csv_path)
+
 
 def generate_user_prompt(df):
     random_record = df.sample(n=1).iloc[0]
     random_pokemon = random_record.to_markdown(index=False)
     return f"# ポケモン図鑑\n{random_pokemon}"
+
 
 def _call_bedrock(user_prompt):
     # システムプロンプトの作成
@@ -120,7 +123,7 @@ def _call_bedrock(user_prompt):
         "content": [{"text": user_prompt}]
     }
     messages = [message]
-    system_prompts = [{"text" : system_prompt}]
+    system_prompts = [{"text": system_prompt}]
 
     # 推論パラメータの設定
     temperature = 0.1
@@ -137,12 +140,14 @@ def _call_bedrock(user_prompt):
         inferenceConfig=inference_config,
         additionalModelRequestFields=additional_model_fields
     )
-    
+
     return response
+
 
 def _parse_to_json(response):
     response_text = response["output"]["message"]["content"][0]["text"]
     return json.loads(response_text)
+
 
 def generate_quiz(user_prompt, max_retry=3):
     for i in range(max_retry):
@@ -158,6 +163,7 @@ def generate_quiz(user_prompt, max_retry=3):
         break
     raise Exception(f"クイズの生成は {max_retry} の試行のあと失敗\n最終エラー：{last_exception}")
 
+
 def post_quiz(quiz):
     question = quiz["question"]
     options = quiz["options"]
@@ -165,17 +171,20 @@ def post_quiz(quiz):
     explanation = quiz["explanation"]
 
     tweet = x_client.create_tweet(
-        text=question, 
-        poll_duration_minutes=60, 
+        text=question,
+        poll_duration_minutes=60,
         poll_options=options
     )
+
+    time.sleep(1)
 
     tweet_id = int(tweet.data["id"])
 
     reply = x_client.create_tweet(
-        text=f"{correct_answer}\n\n{explanation}", 
+        text=f"{correct_answer}\n\n{explanation}",
         quote_tweet_id=tweet_id
     )
+
 
 def main():
     df = load_data()
@@ -184,8 +193,10 @@ def main():
     print(quiz)
     post_quiz(quiz)
 
+
 def lambda_handler(event, context):
     main()
+
 
 if __name__ == "__main__":
     main()
