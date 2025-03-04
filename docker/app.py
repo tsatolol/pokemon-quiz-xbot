@@ -1,9 +1,12 @@
 import json
+import logging
 import os
 import time
 import boto3
 import pandas as pd
 import tweepy
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 BEARER_TOKEN        = os.environ.get("X_BEARER_TOKEN", "for_test")
 API_KEY             = os.environ.get("X_API_KEY", "for_test")
@@ -58,7 +61,7 @@ system_prompt = """
     **問題の形式**
     7. 測りたい能力に見合った問題形式を用いること
     8. 前の問題に対する解答が、後の問題の正誤に影響しないこと
-    9. 「あてはまるものをすべて選べ」という設問は避けること。使う場合は部分点を与えること
+    9. "あてはまるものをすべて選べ"という設問は避けること。使う場合は部分点を与えること
     10. 読解力や思考力を測る記述式問題では字数制限を設けないこと
 
     **問題の記述**
@@ -83,9 +86,9 @@ system_prompt = """
     25. 明らかな誤答枝やお遊びの選択枝など、余計な選択枝を入れないこと
     26. 五十音順、数量の大きさ順など、何らかの法則に従って選択枝を並べること
     27. 正答枝の位置をランダムにばらつかせること
-    28. 「上記のいずれでもない」「上記すべてあてはまる」などの選択枝を用いないこと
-    29. 「～でない」「～以外である」など否定表現を用いないこと
-    30. 「絶対に」「常に」「決して」「完全に」など、強意語を用いないこと
+    28. "上記のいずれでもない" "上記すべてあてはまる"などの選択枝を用いないこと
+    29. "～でない" "～以外である"など否定表現を用いないこと
+    30. "絶対に" "常に" "決して" "完全に"など、強意語を用いないこと
     31. 選択枝は互いに独立であること。内容に重なりがないこと
     32. 一方が正答枝であれば他方は誤答枝であると分かるような、両立しない選択枝を入れないこと
     33. 選択枝の長さをおおむね揃えること
@@ -107,16 +110,19 @@ system_prompt = """
 
 
 def load_data():
+    logging.info("CSVファイルからデータを読み込んでいます。")
     return pd.read_csv(csv_path)
 
 
 def generate_user_prompt(df):
+    logging.info("データからユーザープロンプトを生成しています。")
     random_record = df.sample(n=1).iloc[0]
     random_pokemon = random_record.to_markdown(index=False)
     return f"# ポケモン図鑑\n{random_pokemon}"
 
 
 def _call_bedrock(user_prompt):
+    logging.info("ユーザープロンプトを使用してBedrock APIを呼び出しています。")
     # システムプロンプトの作成
     message = {
         "role": "user",
@@ -141,6 +147,7 @@ def _call_bedrock(user_prompt):
         additionalModelRequestFields=additional_model_fields
     )
 
+    logging.info("Bedrock APIからの応答を受信しました。")
     return response
 
 
@@ -150,26 +157,32 @@ def _parse_to_json(response):
 
 
 def generate_quiz(user_prompt, max_retry=3):
+    logging.info("クイズを生成しています。")
     for i in range(max_retry):
         try:
             response = _call_bedrock(user_prompt)
             response_json = _parse_to_json(response)
+            logging.info("クイズの生成に成功しました。")
             return response_json
         except Exception as e:
             last_exception = e
-            print(e)
+            logging.error(f"クイズ生成中にエラーが発生しました: {e}")
             time.sleep(2**i)
             continue
         break
+    logging.error(f"{max_retry}回の試行後にクイズの生成に失敗しました。")
     raise Exception(f"クイズの生成は {max_retry} の試行のあと失敗\n最終エラー：{last_exception}")
 
 
 def post_quiz(quiz):
+    logging.info("クイズをTwitterに投稿しています。")
     question = quiz["question"]
     options = quiz["options"]
     correct_answer = quiz["correct_answer"]
     explanation = quiz["explanation"]
 
+    # 2025-03-04 時点では、Free プランのレートリミットは17リクエスト/24時間
+    # https://docs.x.com/x-api/fundamentals/rate-limits
     tweet = x_client.create_tweet(
         text=question,
         poll_duration_minutes=60,
@@ -184,14 +197,17 @@ def post_quiz(quiz):
         text=f"{correct_answer}\n\n{explanation}",
         quote_tweet_id=tweet_id
     )
+    logging.info("クイズの投稿に成功しました。")
 
 
 def main():
+    logging.info("メインプロセスを開始します。")
     df = load_data()
     user_prompt = generate_user_prompt(df)
     quiz = generate_quiz(user_prompt)
     print(quiz)
     post_quiz(quiz)
+    logging.info("メインプロセスが完了しました。")
 
 
 def lambda_handler(event, context):
