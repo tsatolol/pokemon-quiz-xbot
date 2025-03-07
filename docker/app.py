@@ -189,14 +189,14 @@ def post_quiz(quiz):
         poll_options=options
     )
 
-    time.sleep(1)
+    # time.sleep(1)
 
-    tweet_id = int(tweet.data["id"])
+    # tweet_id = int(tweet.data["id"])
 
-    reply = x_client.create_tweet(
-        text=f"{correct_answer}\n\n{explanation}",
-        quote_tweet_id=tweet_id
-    )
+    # reply = x_client.create_tweet(
+    #     text=f"{correct_answer}\n\n{explanation}",
+    #     quote_tweet_id=tweet_id
+    # )
     logging.info("クイズの投稿に成功しました。")
 
 

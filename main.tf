@@ -122,7 +122,7 @@ resource "aws_lambda_function" "lambda_for_post" {
 resource "aws_cloudwatch_event_rule" "hourly_rule" {
   name                = "hourly-lambda-trigger"
   description         = "Trigger Lambda function every hour"
-  schedule_expression = "rate(6 hours)"
+  schedule_expression = "rate(8 hours)"
 }
 
 # EventBridge Target

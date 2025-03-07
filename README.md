@@ -54,4 +54,4 @@ terraform apply --auto-approve
 ```
 
 ## TODO
-- エラーハンドリングとロギング
+- [Done] ~~エラーハンドリングとロギング~~
